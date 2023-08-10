@@ -1,0 +1,847 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+2-Apr-2022
+Last updated on 5-Apr-2022
+Explore Climate change effects on poverty
+Get the climate change base data
+```{r}
+climatechange <- read.csv("ClimateChangeFileA.csv")
+str(climatechange)
+```
+```{r}
+climatechangeupdates <- read.csv('ClimateChangeFileB.csv')
+str(climatechangeupdates)
+```
+Now update the main climate change file Climatechange so that it contains the additional variables in the updates file.
+Lets start by building primary keys to facilitate the comparison of observations.
+
+
+```{r}
+climatechange$pk <- paste(climatechange$Code,climatechange$Year)
+climatechangeupdates$pk <- paste(climatechangeupdates$Code, climatechangeupdates$Year)
+```
+```{r}
+library(dplyr)
+```
+
+Now integrate base poverty data with additional poverty indicators
+```{r}
+updclimatechange <- left_join(climatechange,climatechangeupdates,by = "pk") 
+```
+
+
+```{r}
+str(updclimatechange)
+```
+```{r}
+
+```
+
+Now let us check our data for missing values.
+
+```{r}
+names(updclimatechange)[1] = "Country"
+str(updclimatechange)
+```
+
+  Now how do the feature variables relate to the response variable Co2 Emissions?
+```{r}
+library(ggplot2)
+```
+ 
+```{r}
+str(updclimatechange)
+```
+ 
+```{r}
+plot_scatter_t2d = function(updclimatechange, cols,col_y = 'Co2Emissions',alpha=0.5)
+{
+  # Setup the initial plotting area
+  options(repr.plot.width=4,repr.plot.height=3.5)
+  # Now do a scatter plot of all numeric features against the target variable CO2Emissions
+  
+    for (col in cols)
+  {
+    p = ggplot(updclimatechange, aes_string(col,col_y)) +
+      geom_point(alpha=alpha) +
+      geom_density_2d()+
+      ggtitle(paste("2d Density plot of ",col_y, " vs ",col))
+    print (p)
+    
+  }
+}
+numcols = c("Gdp", "Crop.prod","Household.con","Savings", "Livestock.prod","Co2Emissions.capita")
+plot_scatter_t2d(updclimatechange, numcols,,0.1)
+
+```
+ Now save the clean climate changes data to a csv file
+```{r}
+write.csv(updclimatechange,"Data\\Climatedata.csv", row.names = FALSE)
+```
+5-Apr-2022
+Start investigating poverty levels from here
+
+```{r}
+climatedf1 <- read.csv("Climatedata.csv")
+```
+```{r}
+str(climatedf1)
+```
+```{r}
+summary(climatedf1$Gdp.capita)
+```
+
+```{r}
+qqnorm(climatedf1$Co2Emissions,main = "CO2Emissions")
+qqline(climatedf1$Co2Emissions)
+```
+
+As we can see the Co2Emissions do not seem to follow the normal distribtion
+```{r}
+install.packages("ellipsis")
+install.packages("vctrs")
+```
+```{r}
+library(ggplot2)
+```
+
+
+```{r}
+ggplot(climatedf1, aes(Co2Emissions)) + 
+  geom_histogram() +
+  ggtitle("              CO2Emissions by Countries of the World")
+```
+Now lets explore Food security and poverty indicators to appreciate their distributions at global level
+
+```{r}
+plot_hist = function(climatedf1, numcols, bins = 15)
+{
+  # Set the initial plot area dimensions
+  options(repr.plot.width = 4, repr.plot.height = 3)
+#  print(" Function entered")
+  for (col in numcols)
+  {
+    # print('The For loop done')
+    if (is.numeric(climatedf1[,col]))
+    {
+    #  print('Max and min are..')
+    #  print(max(climatedf1[,col]))
+    #  print(min(climatedf1[,col]))
+      bw = (max(climatedf1[,col]) - min(climatedf1[,col])) / bins + 1
+      p = ggplot(climatedf1, aes_string(col)) +
+        geom_histogram(alpha =0.6, bin_width=bw) +
+        ggtitle("Exploring poverty and food security Indicators")
+      print('Bins = ')
+      print(bw)
+      print(p)
+    }
+  }
+  
+}
+numcols = c("Gdp", "Gdp.capita","Household.con","Food.prod", "Livestock.prod","Crop.prod","G.globalization","P.globalization","Savings","Health.capita")
+plot_hist(climatedf1,numcols)
+```
+Income Levels 
+
+The histograms for GDP, GDP per capita are right skewed when taken for all 192 countries, indicating that GDP is and GDP per capita mode
+lies far on the left meaning that gdp and gdp per capita is very slow when you consider all countries.
+
+But is GDP that low because of countries that performed poorly due to the severe impact from
+climate change events?
+Further analysis will shed some light on why gdp and gdp per capita are right skewed.
+
+Food Security & Poverty
+
+The food security situation is depicted by crop production, food production, livestock production, health expenditure 
+percapita and even savings.
+
+As you will see from the histograms they are all right skewed, suggesting that most countries spend very little on health, do very little on crop, food and livestock production.
+
+But again, is that most countries have poor food security or is that some countries are doing so badly on poverty eradication and food security such that they drag the global mode and average down?
+
+We need more analytics to explore and shed some light on those and other issues.
+
+Globalization
+
+The data distribution for political and general globalization are multi-modal suggesting that there are different clusters with different globalization indices.
+What are these clusters of countries and what globalization exposure do they experience?
+
+
+Household Consumption
+
+The data distribution is approximately normal suggesting that there is little spread.
+This could be because the data came from similar countries, like developed economies that that have comprehensive daya collection systems and procedures. Those kind of countries could experience similar household consumption levels. 
+
+
+Now lets use a scatter plot to look at the relationship between numerical features.
+
+```{r}
+library(ggplot2)
+plot_scatter_grid = function(climatedf1, cols,col_y = 'Co2Emissions',alpha=1.0)
+{
+  # Setup the initial plotting area
+  options(repr.plot.width=7,repr.plot.height=5)
+  # Now do a scatter plot of all numeric features against the target variable Co2Emissions
+  for (col in cols)
+  {
+    # print("For loop sprint.AsIs()")
+    p = ggplot(climatedf1, aes_string(col,col_y)) +
+        # geom_point()+
+      geom_point(aes(color = Income.group), alpha=alpha) +
+      ggtitle(paste("Scatter Plot of ",col_y, " vs ",col, 
+      '\n tracked by Region & Continent',
+      '\n distinguished by income groups'))+
+      # print("Now moving to facet grid")
+      facet_grid(ContinentCode ~ Region)
+    
+    print (p)
+    
+  }
+}
+numcols = c("Gdp", "Gdp.capita","Household.con","Food.prod", "Livestock.prod","Crop.prod","G.globalization","P.globalization","Savings","Health.capita")
+plot_scatter_grid(climatedf1, numcols,"Co2Emissions",0.5)
+
+```
+Food Security
+
+It is clear that the food security situation is poorest on the continent of Africa and that Africa does not spend the most on healthcare thus suggesting higher levels of poverty.
+
+```{r}
+# summary(climatedf1$Food.production)
+# summary(climatedf1$Crop.production)
+# summary(climatedf1$Livestock.production)
+```
+
+```{r}
+events <- read.csv("ClimateEvents.csv")
+```
+```{r}
+str(events)
+```
+
+
+Now integrate poverty indicators data with climate events impact data
+The logic of the left_join function requires that country indicator data be duplicated in cases where there are 
+2 lines of climate events data. So after the integration each country will have m x n lines of data,
+where = the number of distinct climate events lines, and m is the number of distinct lines of data for a country.
+
+Therefore during analysis, data must be filtered by the events year, to ensure that we explore indicators data that
+goes with specific climate events data. If this filtering is over-looked there will be double counting and the statistics would be inflated and distorted.
+
+```{r}
+library(dplyr)
+```
+
+```{r}
+library(dplyr)
+povertyncevents <- left_join(climatedf1,events,by = "Country")
+str(povertyncevents)
+```
+
+```{r}
+summary(povertyncevents)
+```
+Now lets explore the impact of climate change events.
+
+Lets select data with climate change impact measurements for the 20 years ending 2017
+
+```{r}
+library(dplyr)
+```
+
+```{r}
+indnevents2017 <- povertyncevents %>% 
+  select(Country, Code.x, ContinentCode,Region,Income.group,Year.x,Gdp, Gdp.capita, Household.con, Co2Emissions,Co2Emissions.capita, Crop.prod,Food.prod,Livestock.prod,Population,
+         Urban.pop,Female.pop,Rural.pop,Health.capita,Health.gdp,G.globalization,
+         P.globalization,Savings,
+         Crirank,Year.20,Criscore,F.avg,F.rank,Fp100.avg,Fp100.rank,
+         Losses.avg,Losses.rank,Lpgdp.avg,Lpgdp.rank) %>%
+  filter(Year.20 == "2017")
+str(indnevents2017)
+```
+```{r}
+# Create raw panel data for all 192 countries
+
+allpaneldata <- povertyncevents %>% 
+  select(Country, Code.x, ContinentCode,Region,Income.group,Year.x,Gdp, Gdp.capita, Household.con, Co2Emissions,Co2Emissions.capita, Crop.prod,Food.prod,Livestock.prod,Population,
+         Urban.pop,Female.pop,Rural.pop,Health.capita,Health.gdp,G.globalization,
+         P.globalization,Savings,
+         Crirank,Year.20,Criscore,F.avg,F.rank,Fp100.avg,Fp100.rank,
+         Losses.avg,Losses.rank,Lpgdp.avg,Lpgdp.rank) 
+```
+
+```{r}
+str(allpaneldata)
+```
+
+
+```{r}
+# summary(indnevents2017$F.avg)
+```
+
+```{r}
+indnevents2017$Losses.avg <- as.numeric(indnevents2017$Losses.avg)
+indnevents2017$F.avg <- as.numeric(indnevents2017$F.avg)
+str(indnevents2017)
+```
+```{r}
+install.packages("GGally")
+```
+
+
+```{r}
+library(GGally)
+```
+
+Now setup a scatter plot matrix
+
+
+```{r}
+# numcols = c("Fatalities.avg","Fatalities.rank","Fatalitiesp100.avg","Fatalitiesp100.rank",
+  #          "Losses.avg","Losses.rank",
+   #         "Lossespergdp.avg","Lossespergdp.rank","Criscore","Crirank","Savings",
+    #        "Political.globalization",
+     #       "General.globalization","Health.gdp","Health.percapita","Rural.population",
+      #       "Female.population",
+       #      "Urban.population","Population",
+        #    "Livestock.production","Food.production","Crop.production","Co2Emissions.percapita",
+         #   "Co2Emissions", "Household.consumption","Gdp.capita","Gdp")
+
+
+# options(repr.plot.width=20,repr.plot.height=20)
+
+# We want to see the relationship between climate change events and food security 
+numcols.1 = c("Fp100.avg","Fp100.rank",
+            "Livestock.prod","Food.prod","Crop.prod")
+            
+            #  "Livestock.production","Food.production","Crop.production","Co2Emissions.percapita",
+            # "Co2Emissions", "Household.consumption","Gdp.capita","Gdp")
+ggpairs(indnevents2017, columns = numcols.1, ggplot2::aes(colour= factor(Income.group))) +
+  ggtitle("To what extent are Climate Change Events affecting Food Security?")
+
+```
+
+```{r}
+
+numcols.2 = c("Lpgdp.avg", "Lpgdp.rank","Livestock.prod","Food.prod","Crop.prod")
+ggpairs(indnevents2017, columns = numcols.2, ggplot2::aes(colour= factor(Income.group))) +
+  ggtitle("To what extent are Climate Change Events affecting Food Security?")   
+
+```
+
+```{r}
+numcols.3 = c("Losses.avg", "Losses.rank","Livestock.prod","Food.prod","Crop.prod")
+ggpairs(indnevents2017, columns = numcols.3, ggplot2::aes(colour= factor(Income.group))) +
+  ggtitle("To what extent are Climate Change Events affecting Food Security?")  
+
+```
+```{r}
+numcols.4 = c("Fp100.avg","Fp100.rank","Lpgdp.avg", "Lpgdp.rank","Health.gdp","Health.capita")
+ggpairs(indnevents2017, columns = numcols.4, ggplot2::aes(colour= factor(Income.group))) +
+  ggtitle("To what extent are Climate Change Events affecting Health Expenditure??")  
+```
+```{r}
+numcols.5 = c("Fp100.avg","Fp100.rank","Lpgdp.avg", "Lpgdp.rank","Gdp","Gdp.capita")
+ggpairs(indnevents2017, columns = numcols.5, ggplot2::aes(colour= factor(Income.group))) +
+  ggtitle("To what extent are Climate Change Events affecting Gdp?") 
+```
+```{r}
+summary(indnevents2017$Criscore)
+summary(indnevents2017$Crirank)
+```
+
+
+```{r}
+str(indnevents2017)
+```
+```{r}
+numcols.6 = c("Crirank","Criscore","Food.prod", "Health.capita","Gdp","Gdp.capita")
+ggpairs(indnevents2017, columns = numcols.6, ggplot2::aes(colour= factor(Income.group))) +
+  ggtitle("To what extent are Climate Change Events contributing to Poverty?") 
+```
+```{r}
+# Now save the Indicators and Events data integrated
+write.csv(indnevents2017,"Data\\EindicatorsnEvents.csv", row.names = FALSE)
+```
+
+
+```{r}
+head(indnevents2017)
+```
+
+Now analyze the indicators of food security and economic performance according to the impact of climate change events.
+Read the the file EindicatorsnEvents.csv from disk, create the Impact variable.
+
+
+
+```{r}
+wellbeing2017 <- read.csv("EindicatorsnEvents.csv")
+str(wellbeing2017)
+```
+
+Create a new feature Impact that groups countries according to their Cri rank
+
+Test1$Impact200 <- case_when(Test1$x <= 3 ~ "Severe",
+                              Test1$x <= 4 ~  "Bad",
+                              TRUE ~ "Mild" 
+ )
+ The above code has been well tested. Create a data suitable data set Test1 to try it. 
+
+```{r}
+library(dplyr)
+wellbeing2017$Impact <- case_when(wellbeing2017$Crirank <= 20 ~ "Severe",
+                                       wellbeing2017$Crirank <= 40 ~ "Bad",
+                                      wellbeing2017$Crirank <=  60 ~ "Mild",
+                                    TRUE ~ "Low"
+                                    )
+```
+
+```{r}
+str(wellbeing2017)
+head(wellbeing2017)
+```
+
+
+Lets do some more feature analysis and extraction..
+Food Security = Food production + Crop production + Livestock production
+The greater the food security the better.
+
+Well being = Food Security + Health Expenditure + Household Consumption + Savings
+The higher the value of well being the wealthier a country is and vice versa
+
+```{r}
+# data1$x_fac[is.na(data1$x_fac)] <- 0 This has been tested and debugged 
+# Because x + NA = NA, for the variables concerned We must 
+# treat missing values to facilitate feature extraction
+
+wellbeing2017$Food.prod[is.na(wellbeing2017$Food.prod)] <- 0
+wellbeing2017$Crop.prod[is.na(wellbeing2017$Crop.prod)] <- 0
+wellbeing2017$Livestock.prod[is.na(wellbeing2017$Livestock.prod)] <- 0
+
+wellbeing2017$Health.capita[is.na(wellbeing2017$Health.capita)] <- 0
+wellbeing2017$Household.con[is.na(wellbeing2017$Household.con)] <- 0
+wellbeing2017$Savings[is.na(wellbeing2017$Savings)] <- 0
+
+```
+```{r}
+# Now generate the new features
+wellbeing2017$Food.security <- wellbeing2017$Food.prod + wellbeing2017$Crop.prod + 
+  wellbeing2017$Livestock.prod
+
+wellbeing2017$Well.being <- wellbeing2017$Food.prod + wellbeing2017$Crop.prod + 
+  wellbeing2017$Health.capita + wellbeing2017$Livestock.prod +
+  wellbeing2017$Household.con + wellbeing2017$Savings
+
+```
+
+
+```{r}
+# The new features should not have NAs
+head(wellbeing2017)
+```
+```{r}
+# Check if some data still has NAs
+sum(is.na(wellbeing2017$Household.con))
+sum(is.na(wellbeing2017$Savings))
+```
+
+Now let us explore Food Security, well being and poverty
+```{r}
+library(ggplot2)
+violin_plot = function(wellbeing2017, cols,col_y = 'Food.security')
+{
+  # Setup the initial plotting area
+  options(repr.plot.width=4,repr.plot.height=3.5)
+  # Now do a violin plot of all categorical features against Food Security
+  for (col in cols)
+  {
+    p = ggplot(wellbeing2017, aes_string(col,col_y)) +
+      geom_violin() +
+      ggtitle(paste("What is the Food Security situation? ",col, " vs ",col_y))
+    print (p)
+    
+  }
+}
+
+
+categorical_vars = c('Income.group','Impact','ContinentCode','Region') 
+                     
+violin_plot(wellbeing2017,categorical_vars,)
+```
+```{r}
+library(ggplot2)
+Box_plot = function(wellbeing2017, cols,col_y = 'Food.security')
+{
+  # Setup the initial plotting area
+  options(repr.plot.width=4,repr.plot.height=3.5)
+  # Now do a violin plot of all categorical features against Food Security
+  for (col in cols)
+  {
+    p = ggplot(wellbeing2017, aes_string(col,col_y)) +
+      geom_boxplot() +
+      ggtitle(paste("What is the Food Security situation? ",col, " vs ",col_y))
+    print (p)
+    
+  }
+}
+
+
+categorical_vars = c('Income.group','Impact','ContinentCode','Region') 
+                     
+
+Box_plot(wellbeing2017,categorical_vars,)
+```
+Now lets look at well being and poverty.
+
+```{r}
+library(ggplot2)
+Box_plot = function(wellbeing2017, cols,col_y = 'Well.being')
+{
+  # Setup the initial plotting area
+  options(repr.plot.width=4,repr.plot.height=3.5)
+  # Now do a violin plot of all categorical features against Food Security
+  for (col in cols)
+  {
+    p = ggplot(wellbeing2017, aes_string(col,col_y)) +
+      geom_boxplot() +
+      ggtitle(paste("Could poverty be linked to Climate Change Events? ",col, " vs ",col_y))
+    print (p)
+    
+  }
+}
+
+
+categorical_vars = c('Income.group','Impact','ContinentCode','Region') 
+                     
+
+Box_plot(wellbeing2017,categorical_vars,)
+```
+
+```{r}
+library(ggplot2)
+violin_plot = function(wellbeing2017, cols,col_y = 'Well.being')
+{
+  # Setup the initial plotting area
+  options(repr.plot.width=4,repr.plot.height=3.5)
+  # Now do a violin plot of all categorical features against Well Being/Poverty
+  for (col in cols)
+  {
+    p = ggplot(wellbeing2017, aes_string(col,col_y)) +
+      geom_violin() +
+      ggtitle(paste("Could poverty be linked to Climate Change Events? ",col, " vs ",col_y))
+    print (p)
+    
+  }
+}
+
+
+categorical_vars = c('Income.group','Impact','ContinentCode','Region') 
+                     
+violin_plot(wellbeing2017,categorical_vars,)
+```
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+str(wellbeing2017)
+```
+
+```{r}
+library(ggplot2)
+library(GGally)
+numcols.5 = c("Fp100.avg","Lpgdp.avg", "Food.security","Well.being")
+ggpairs(wellbeing2017, columns = numcols.5, ggplot2::aes(colour= factor(Impact))) +
+  ggtitle("Are key climate change events linked to food security and poverty?") 
+```
+
+What is the distribution of Food Security and Poverty by Impact?
+
+```{r}
+library(ggplot2)
+plot_hist_grid = function(wellbeing2017,numcols,bins=10)
+{
+  options(repr.plot.width = 6, repr.plot.height = 4)
+  for (col in numcols)
+  {
+    if (is.numeric(wellbeing2017[,col]))
+    {
+      bw = (max(wellbeing2017[,col]) - min(wellbeing2017[,col])) / (bins+1)
+      p = ggplot(wellbeing2017, aes_string(col))  + 
+          geom_histogram(binwidth = bw, aes(y = ..density..),alpha=0.5) +
+          geom_density(aes(y = ..density..),color = "blue") + 
+          geom_rug() +
+          facet_grid(. ~ Impact) +
+          ggtitle("How does food security and poverty compare against Climate Change Impact?")
+      print(p)
+    }
+  }
+}
+ numcols.10 <- c("Food.security","Well.being","Co2Emissions","Fp100.avg","Lpgdp.avg")
+ plot_hist_grid(wellbeing2017,numcols.10)
+```
+```{r}
+library(ggplot2)
+plotfinal_scatter_t2d = function(wellbeing2017, cols,col_y = 'Co2Emissions',alpha=0.5)
+{
+  # Setup the initial plotting area
+  options(repr.plot.width=4,repr.plot.height=3.5)
+  # Now do a scatter plot of all numeric features against the target variable CO2Emissions
+  
+    for (col in cols)
+  {
+    p = ggplot(wellbeing2017, aes_string(col,col_y)) +
+      geom_point(alpha=alpha) +
+      geom_density_2d()+
+      ggtitle(paste("2d Density plot of ",col_y, " vs ",col))
+    print (p)
+    
+  }
+}
+numcols = c("Household.con","Food.security", "Well.being","Crirank", "Criscore","F.avg","F.rank","Fp100.avg","Fp100.rank","Losses.avg","Losses.rank","Gdp", "Livestock.prod","Crop.prod","G.globalization","P.globalization","Savings","Health.capita",
+            "Population","Urban.pop","Female.pop","Rural.pop")
+plotfinal_scatter_t2d(wellbeing2017, numcols,,0.1)
+
+
+```
+```{r}
+install.packages("stats")
+```
+Lets build a regression model for all 192 countries 
+
+```{r}
+library(stats)
+ model192 <- lm(Co2Emissions ~ Household.con + Food.security+Well.being+G.globalization+P.globalization+Gdp+Urban.pop+Rural.pop,
+                data = wellbeing2017)
+summary(model192)
+
+
+```
+```{r}
+
+model192.2 <- lm(Co2Emissions ~ Household.con + Well.being+G.globalization+P.globalization+Gdp,
+                data = wellbeing2017)
+summary(model192.2)
+
+```
+# Now lets build a model for developing countries
+# For the purpose of this analysis, developing countries Income group = Low or Lower-Middle Income
+
+```{r}
+str(wellbeing2017)
+```
+```{r}
+library(dplyr)
+developing.countries <- wellbeing2017 %>% select(Country,ContinentCode,Region,Income.group,Gdp,Gdp.capita,
+                                                 Household.con,Co2Emissions,Co2Emissions.capita,Crop.prod,
+                                                 Food.prod,Livestock.prod,Population,Urban.pop,Female.pop,
+                                                 Rural.pop,Health.capita,Health.gdp,G.globalization,
+                                                 P.globalization,Savings,Crirank,Year.20,Criscore,
+                                                 F.avg,F.rank,Fp100.avg,Fp100.rank,Losses.avg,Lpgdp.rank,
+                                                 Impact,Food.security,Well.being) %>%
+                                  filter(Income.group=="Low" | Income.group=="Low-Mid")
+
+```
+```{r}
+head(developing.countries)
+tail(developing.countries)
+```
+```{r}
+library(dplyr)
+developed.countries <- wellbeing2017 %>% select(Country,ContinentCode,Region,Income.group,Gdp,Gdp.capita,
+                                                 Household.con,Co2Emissions,Co2Emissions.capita,Crop.prod,
+                                                 Food.prod,Livestock.prod,Population,Urban.pop,Female.pop,
+                                                 Rural.pop,Health.capita,Health.gdp,G.globalization,
+                                                 P.globalization,Savings,Crirank,Year.20,Criscore,
+                                                 F.avg,F.rank,Fp100.avg,Fp100.rank,Losses.avg,Lpgdp.rank,
+                                                 Impact,Food.security,Well.being) %>%
+                                  filter(Income.group=="Up-Mid" | Income.group=="Hi")
+
+```
+```{r}
+library(stats)
+model.hi <- lm(Co2Emissions ~ Household.con + Well.being+G.globalization+P.globalization+Gdp,
+                data = developed.countries)
+summary(model.hi)
+```
+```{r}
+library(dplyr)
+mostaffected.countries <- wellbeing2017 %>% select(Country,ContinentCode,Region,Income.group,Gdp,Gdp.capita,
+                                                 Household.con,Co2Emissions,Co2Emissions.capita,Crop.prod,
+                                                 Food.prod,Livestock.prod,Population,Urban.pop,Female.pop,
+                                                 Rural.pop,Health.capita,Health.gdp,G.globalization,
+                                                 P.globalization,Savings,Crirank,Year.20,Criscore,
+                                                 F.avg,F.rank,Fp100.avg,Fp100.rank,Losses.avg,Lpgdp.rank,
+                                                 Impact,Food.security,Well.being) %>%
+                                  filter(Crirank <= 101)
+
+```
+
+```{r}
+library(stats)
+model.mostaffected <- lm(Co2Emissions ~ Household.con + Well.being+G.globalization+P.globalization+Gdp,
+                data = mostaffected.countries)
+summary(model.mostaffected)
+```
+Now lets use quantile and panel regression 
+
+```{r}
+install.packages("quantreg")
+
+```
+
+
+
+```{r}
+library(quantreg)
+
+#fit model - Most affected countries using quantile regression
+# model.quant <- rq(Co2Emissions ~ hours, data = df, tau = 0.9)
+# Top 100 countries out of 192 = 53th percentile
+
+model.quant <-  rq(Co2Emissions ~ Household.con + Well.being+G.globalization+P.globalization+Gdp,
+                data = wellbeing2017,tau = 0.53)
+summary(model.quant)
+```
+```{r}
+library(ggplot2)
+#create scatterplot with quantile regression line
+ggplot(wellbeing2017,aes(Co2Emissions,Gdp)) +
+  geom_point() + 
+  geom_abline(intercept=coef(model.quant)[1], slope=coef(model.quant)[2])
+
+```
+Panel Regression
+
+
+```{r}
+install.packages(plm)
+install.packages(lfe)
+install.packages(lmtest)
+install.packages(car)
+install.packages(geepack)
+
+```
+```{r}
+library(ggplot2)
+library(dplyr)
+library(plm)
+library(lfe)
+library(lmtest)
+library(car)
+library(geepack)
+```
+Panel data regression for all countries
+```{r}
+str(allpaneldata)
+```
+```{r}
+# Fix the features for the data panel 
+allpaneldata$Food.prod[is.na(allpaneldata$Food.prod)] <- 0
+allpaneldata$Crop.prod[is.na(allpaneldata$Crop.prod)] <- 0
+allpaneldata$Livestock.prod[is.na(allpaneldata$Livestock.prod)] <- 0
+
+allpaneldata$Health.capita[is.na(allpaneldata$Health.capita)] <- 0
+allpaneldata$Household.con[is.na(allpaneldata$Household.con)] <- 0
+allpaneldata$Savings[is.na(allpaneldata$Savings)] <- 0
+
+```
+```{r}
+# Now generate the new features
+allpaneldata$Food.security <- allpaneldata$Food.prod + allpaneldata$Crop.prod + 
+  allpaneldata$Livestock.prod
+
+allpaneldata$Well.being <- allpaneldata$Food.prod + allpaneldata$Crop.prod + 
+  allpaneldata$Health.capita + allpaneldata$Livestock.prod +
+  allpaneldata$Household.con + allpaneldata$Savings
+```
+```{r}
+# Now save allpaneldata to disk
+write.csv(allpaneldata,"Data\\Allpaneldata.csv", row.names = FALSE)
+```
+```{r}
+str(allpaneldata)
+```
+
+
+```{r}
+# You can read all panel data from disk and continue from here.
+allpaneldata1 <- read.csv("Allpaneldata.csv")
+head(allpaneldata1)
+```
+
+```{r}
+# Build a panel for developing countries
+
+library(dplyr)
+developingcountries.panel <- allpaneldata %>% select(Country,ContinentCode,Region,Income.group,Year.x,Gdp,Gdp.capita,
+                                                 Household.con,Co2Emissions,Co2Emissions.capita,Crop.prod,
+                                                 Food.prod,Livestock.prod,Population,Urban.pop,Female.pop,
+                                                 Rural.pop,Health.capita,Health.gdp,G.globalization,
+                                                 P.globalization,Savings,Crirank,Year.20,Criscore,
+                                                 F.avg,F.rank,Fp100.avg,Fp100.rank,Losses.avg,Lpgdp.rank,
+                                                 Food.security,Well.being) %>%
+                                  filter(Income.group=="Low" | Income.group=="Low-Mid")
+```
+
+```{r}
+
+library(dplyr)
+developedcountries.panel <- allpaneldata %>% select(Country,ContinentCode,Region,Income.group,Year.x,Gdp,Gdp.capita,
+                                                 Household.con,Co2Emissions,Co2Emissions.capita,Crop.prod,
+                                                 Food.prod,Livestock.prod,Population,Urban.pop,Female.pop,
+                                                 Rural.pop,Health.capita,Health.gdp,G.globalization,
+                                                 P.globalization,Savings,Crirank,Year.20,Criscore,
+                                                 F.avg,F.rank,Fp100.avg,Fp100.rank,Losses.avg,Lpgdp.rank,
+                                                 Food.security,Well.being) %>%
+                                  filter(Income.group=="Up-Mid" | Income.group=="Hi")
+```
+```{r}
+library(ggplot2)
+library(dplyr)
+library(plm)
+library(lfe)
+library(lmtest)
+library(car)
+library(geepack)
+allcountries.plm  <- plm(Co2Emissions ~ Gdp+Household.con+Well.being+G.globalization+P.globalization, data = allpaneldata, 
+                    index = c("Year.x"), 
+                    effect = "individual", model = "within")
+
+summary(allcountries.plm)
+```
+```{r}
+developingcountries.plm  <- plm(Co2Emissions ~ Gdp+Household.con+Well.being+G.globalization+P.globalization, data = developingcountries.panel, 
+                    index = c("Year.x"), 
+                    effect = "individual", model = "within")
+
+summary(developingcountries.plm)
+```
+```{r}
+developedcountries.plm  <- plm(Co2Emissions ~ Gdp+Household.con+Well.being+G.globalization+P.globalization, data = developedcountries.panel, 
+                    index = c("Year.x"), 
+                    effect = "individual", model = "within")
+
+summary(developedcountries.plm)
+```
+
+```{r}
+library(quantreg)
+
+#fit model - Most affected countries using quantile regression and allpaneldata
+# Top 100 countries out of 192 = 53th percentile
+
+model1.quant <-  rq(Co2Emissions ~ Household.con + Well.being+G.globalization+P.globalization+Gdp,
+                data = allpaneldata,tau = 0.53)
+summary(model1.quant)
+```
+
+
